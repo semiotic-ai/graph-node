@@ -6,24 +6,22 @@ use anyhow::Context;
 use graphql_parser::Pos;
 use lazy_static::lazy_static;
 
-use crate::data::graphql::{ObjectOrInterface, ObjectTypeExt};
+use crate::data::graphql::{ObjectOrInterface, ObjectTypeExt, TypeExt};
 use crate::data::store::IdType;
-use crate::schema::{ast, META_FIELD_NAME, META_FIELD_TYPE, SQL_FIELD_NAME, SQL_FIELD_TYPE};
+use crate::schema::{
+    ast, META_FIELD_NAME, META_FIELD_TYPE, SCHEMA_TYPE_NAME, SQL_FIELD_NAME, SQL_FIELD_TYPE,
+};
 
-use crate::data::graphql::ext::{DefinitionExt, DirectiveExt, DocumentExt, ValueExt};
+use crate::data::graphql::ext::{
+    camel_cased_names, DefinitionExt, DirectiveExt, DocumentExt, ValueExt,
+};
 use crate::prelude::s::{Value, *};
 use crate::prelude::*;
 use thiserror::Error;
 
 use crate::cheap_clone::CheapClone;
-use crate::data::graphql::{ObjectOrInterface, ObjectTypeExt, TypeExt};
-use crate::data::store::IdType;
 use crate::env::ENV_VARS;
-use crate::schema::{ast, META_FIELD_NAME, META_FIELD_TYPE, SCHEMA_TYPE_NAME};
 
-use crate::data::graphql::ext::{
-    camel_cased_names, DefinitionExt, DirectiveExt, DocumentExt, ValueExt,
-};
 use crate::derive::CheapClone;
 use crate::prelude::{q, r, s, DeploymentHash};
 
@@ -364,7 +362,7 @@ pub(in crate::schema) fn api_schema(
     // Refactor: Don't clone the schema.
     let mut api = init_api_schema(input_schema)?;
     add_meta_field_type(&mut api.document);
-    add_sql_field_type(&mut schema.document);
+    add_sql_field_type(&mut api.document);
     add_types_for_object_types(&mut api, input_schema)?;
     add_types_for_interface_types(&mut api, input_schema)?;
     add_types_for_aggregation_types(&mut api, input_schema)?;
@@ -1330,9 +1328,9 @@ fn meta_field() -> s::Field {
     META_FIELD.clone()
 }
 
-fn sql_field() -> Field {
+fn sql_field() -> s::Field {
     lazy_static! {
-        static ref SQL_FIELD: Field = Field {
+        static ref SQL_FIELD: s::Field = s::Field {
             position: Pos::default(),
             description: Some("Access to SQL queries".to_string()),
             name: SQL_FIELD_NAME.to_string(),
@@ -1406,7 +1404,7 @@ fn add_field_arguments(
                     // Get corresponding object type and field in the output schema
                     let object_type = ast::get_object_type_mut(schema, &input_object_type.name)
                         .expect("object type from input schema is missing in API schema");
-                    let mut field = object_type
+                    let field = object_type
                         .fields
                         .iter_mut()
                         .find(|field| field.name == input_field.name)
@@ -1438,7 +1436,7 @@ fn add_field_arguments(
                     let interface_type =
                         ast::get_interface_type_mut(schema, &input_interface_type.name)
                             .expect("interface type from input schema is missing in API schema");
-                    let mut field = interface_type
+                    let field = interface_type
                         .fields
                         .iter_mut()
                         .find(|field| field.name == input_field.name)
