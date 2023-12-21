@@ -5,6 +5,14 @@ use std::sync::Arc;
 use anyhow::Context;
 use graphql_parser::Pos;
 use lazy_static::lazy_static;
+
+use crate::data::graphql::{ObjectOrInterface, ObjectTypeExt};
+use crate::data::store::IdType;
+use crate::schema::{ast, META_FIELD_NAME, META_FIELD_TYPE, SQL_FIELD_NAME, SQL_FIELD_TYPE};
+
+use crate::data::graphql::ext::{DefinitionExt, DirectiveExt, DocumentExt, ValueExt};
+use crate::prelude::s::{Value, *};
+use crate::prelude::*;
 use thiserror::Error;
 
 use crate::cheap_clone::CheapClone;
@@ -1077,6 +1085,7 @@ fn add_query_type(api: &mut s::Document, input_schema: &InputSchema) -> Result<(
     fields.append(&mut agg_fields);
     fields.append(&mut fulltext_fields);
     fields.push(meta_field());
+    fields.push(sql_field());
 
     let typedef = s::TypeDefinition::Object(s::ObjectType {
         position: Pos::default(),
@@ -1175,6 +1184,7 @@ fn add_subscription_type(
         .collect::<Vec<s::Field>>();
     fields.append(&mut agg_fields);
     fields.push(meta_field());
+    fields.push(sql_field());
 
     let typedef = s::TypeDefinition::Object(s::ObjectType {
         position: Pos::default(),
@@ -1318,6 +1328,139 @@ fn meta_field() -> s::Field {
         };
     }
     META_FIELD.clone()
+}
+
+fn sql_field() -> Field {
+    lazy_static! {
+        static ref SQL_FIELD: Field = Field {
+            position: Pos::default(),
+            description: Some("Access to SQL queries".to_string()),
+            name: SQL_FIELD_NAME.to_string(),
+            arguments: vec![
+             //query: String
+                InputValue {
+                    position: Pos::default(),
+                    description: None,
+                    name: String::from("query"),
+                    value_type: Type::NonNullType(Box::new(Type::NamedType(String::from("String")))),
+                    default_value: None,
+                    directives: vec![],
+
+                }
+            ],
+            field_type: Type::NamedType(SQL_FIELD_TYPE.to_string()),
+            directives: vec![],
+        };
+    }
+
+    SQL_FIELD.clone()
+}
+
+/// Generates arguments for collection queries of a named type (e.g. User).
+fn collection_arguments_for_named_type(type_name: &str) -> Vec<InputValue> {
+    // `first` and `skip` should be non-nullable, but the Apollo graphql client
+    // exhibts non-conforming behaviour by erroing if no value is provided for a
+    // non-nullable field, regardless of the presence of a default.
+    let mut skip = input_value("skip", "", Type::NamedType("Int".to_string()));
+    skip.default_value = Some(Value::Int(0.into()));
+
+    let mut first = input_value("first", "", Type::NamedType("Int".to_string()));
+    first.default_value = Some(Value::Int(100.into()));
+
+    let args = vec![
+        skip,
+        first,
+        input_value(
+            "orderBy",
+            "",
+            Type::NamedType(format!("{}_orderBy", type_name)),
+        ),
+        input_value(
+            "orderDirection",
+            "",
+            Type::NamedType("OrderDirection".to_string()),
+        ),
+        input_value(
+            "where",
+            "",
+            Type::NamedType(format!("{}_filter", type_name)),
+        ),
+    ];
+
+    args
+}
+
+fn add_field_arguments(
+    schema: &mut Document,
+    input_schema: &Document,
+) -> Result<(), APISchemaError> {
+    // Refactor: Remove the `input_schema` argument and do a mutable iteration
+    // over the definitions in `schema`. Also the duplication between this and
+    // the loop for interfaces below.
+    for input_object_type in input_schema.get_object_type_definitions() {
+        for input_field in &input_object_type.fields {
+            if let Some(input_reference_type) =
+                ast::get_referenced_entity_type(input_schema, input_field)
+            {
+                if ast::is_list_or_non_null_list_field(input_field) {
+                    // Get corresponding object type and field in the output schema
+                    let object_type = ast::get_object_type_mut(schema, &input_object_type.name)
+                        .expect("object type from input schema is missing in API schema");
+                    let mut field = object_type
+                        .fields
+                        .iter_mut()
+                        .find(|field| field.name == input_field.name)
+                        .expect("field from input schema is missing in API schema");
+
+                    match input_reference_type {
+                        TypeDefinition::Object(ot) => {
+                            field.arguments = collection_arguments_for_named_type(&ot.name);
+                        }
+                        TypeDefinition::Interface(it) => {
+                            field.arguments = collection_arguments_for_named_type(&it.name);
+                        }
+                        _ => unreachable!(
+                            "referenced entity types can only be object or interface types"
+                        ),
+                    }
+                }
+            }
+        }
+    }
+
+    for input_interface_type in input_schema.get_interface_type_definitions() {
+        for input_field in &input_interface_type.fields {
+            if let Some(input_reference_type) =
+                ast::get_referenced_entity_type(input_schema, input_field)
+            {
+                if ast::is_list_or_non_null_list_field(input_field) {
+                    // Get corresponding interface type and field in the output schema
+                    let interface_type =
+                        ast::get_interface_type_mut(schema, &input_interface_type.name)
+                            .expect("interface type from input schema is missing in API schema");
+                    let mut field = interface_type
+                        .fields
+                        .iter_mut()
+                        .find(|field| field.name == input_field.name)
+                        .expect("field from input schema is missing in API schema");
+
+                    match input_reference_type {
+                        TypeDefinition::Object(ot) => {
+                            field.arguments = collection_arguments_for_named_type(&ot.name);
+                        }
+                        TypeDefinition::Interface(it) => {
+                            field.arguments = collection_arguments_for_named_type(&it.name);
+                        }
+                        _ => unreachable!(
+                            "referenced entity types can only be object or interface types"
+                        ),
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
