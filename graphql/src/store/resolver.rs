@@ -12,7 +12,7 @@ use graph::derive::CheapClone;
 use graph::prelude::*;
 use graph::schema::{
     ast as sast, ApiSchema, INTROSPECTION_SCHEMA_FIELD_NAME, INTROSPECTION_TYPE_FIELD_NAME,
-    META_FIELD_NAME, META_FIELD_TYPE,
+    META_FIELD_NAME, META_FIELD_TYPE, SQL_FIELD_TYPE,
 };
 use graph::schema::{ErrorPolicy, BLOCK_FIELD_TYPE};
 
@@ -281,6 +281,34 @@ impl StoreResolver {
         );
         return Ok(r::Value::object(map));
     }
+
+    fn handle_sql(
+        &self,
+        prefetched_object: Option<r::Value>,
+        field: &a::Field,
+        object_type: &ObjectOrInterface<'_>,
+    ) -> Result<(Option<r::Value>, Option<r::Value>), QueryExecutionError> {
+        if !object_type.is_sql() {
+            return Ok((prefetched_object, None));
+        }
+
+        let query = field.argument_value("query").unwrap();
+
+        let _query = match query {
+            graph::data::value::Value::String(s) => s,
+            _ => return Err(QueryExecutionError::Unimplemented(String::new())),
+        };
+
+        // TODO: Execute the query and return the results
+
+        let sql_result = object! {
+            __typename: SQL_FIELD_TYPE,
+            columns: r::Value::List(vec![]),
+            rows: r::Value::List(vec![]),
+        };
+
+        Ok((prefetched_object, Some(sql_result)))
+    }
 }
 
 #[async_trait]
@@ -329,6 +357,13 @@ impl Resolver for StoreResolver {
         if object_type.is_meta() {
             return self.lookup_meta(field).await;
         }
+
+        let (prefetched_object, sql_result) =
+            self.handle_sql(prefetched_object, &field, &object_type)?;
+        if let Some(sql_result) = sql_result {
+            return Ok(sql_result);
+        }
+
         if let Some(r::Value::List(children)) = prefetched_object {
             if children.len() > 1 {
                 let derived_from_field =
