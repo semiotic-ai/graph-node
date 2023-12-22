@@ -61,11 +61,11 @@ impl QueryStoreTrait for QueryStore {
         &self,
         sql: &str,
     ) -> Result<Vec<SqlQueryObject>, graph::prelude::QueryExecutionError> {
-        let conn = self
+        let mut conn = self
             .store
             .get_replica_conn(self.replica_id)
             .map_err(|e| QueryExecutionError::SqlError(format!("SQL error: {}", e)))?;
-        self.store.execute_sql(&conn, sql)
+        self.store.execute_sql(&mut conn, sql)
     }
 
     /// Return true if the deployment with the given id is fully synced,

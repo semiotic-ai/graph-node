@@ -1607,7 +1607,7 @@ dependencies = [
  "slog-async",
  "slog-envlogger",
  "slog-term",
- "sqlparser",
+ "sqlparser 0.43.1",
  "stable-hash 0.3.4",
  "stable-hash 0.4.4",
  "strum_macros",
@@ -1903,6 +1903,14 @@ dependencies = [
  "serde_derive",
  "tokio-tungstenite",
  "uuid",
+]
+
+[[package]]
+name = "graph-sql"
+version = "0.35.0"
+dependencies = [
+ "anyhow",
+ "sqlparser 0.40.0",
 ]
 
 [[package]]

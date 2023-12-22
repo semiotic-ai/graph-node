@@ -282,7 +282,7 @@ impl DeploymentStore {
 
     pub(crate) fn execute_sql(
         &self,
-        conn: &PgConnection,
+        conn: &mut PgConnection,
         query: &str,
     ) -> Result<Vec<SqlQueryObject>, QueryExecutionError> {
         let query = diesel::sql_query(query);

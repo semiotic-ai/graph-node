@@ -472,7 +472,7 @@ pub fn parse_id(id_type: IdType, json: serde_json::Value) -> Result<Id, StoreErr
 
 #[derive(QueryableByName, Debug)]
 pub struct JSONData {
-    #[sql_type = "Jsonb"]
+    #[diesel(sql_type = Jsonb)]
     pub data: serde_json::Value,
 }
 
