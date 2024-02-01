@@ -1912,7 +1912,9 @@ name = "graph-sql"
 version = "0.35.0"
 dependencies = [
  "anyhow",
+ "lazy_static",
  "sqlparser 0.40.0",
+ "thiserror",
 ]
 
 [[package]]
