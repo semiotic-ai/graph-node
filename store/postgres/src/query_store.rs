@@ -65,7 +65,7 @@ impl QueryStoreTrait for QueryStore {
             .store
             .get_replica_conn(self.replica_id)
             .map_err(|e| QueryExecutionError::SqlError(format!("SQL error: {}", e)))?;
-        self.store.execute_sql(&mut conn, sql)
+        self.store.execute_sql(&mut conn, self.site.clone(), sql)
     }
 
     /// Return true if the deployment with the given id is fully synced,
