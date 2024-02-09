@@ -234,7 +234,7 @@ where
 }
 
 pub(crate) fn get_field<'a>(
-    object_type: impl Into<ObjectOrInterface<'a>>,
+    object_type: impl Into<QueryableType<'a>>,
     name: &str,
 ) -> Option<s::Field> {
     if name == "__schema" || name == "__type" {
@@ -682,8 +682,13 @@ async fn resolve_field_value_for_named_type(
                 .await
         }
 
-        s::TypeDefinition::Union(_) => Err(QueryExecutionError::Unimplemented("unions".to_owned())),
+        s::TypeDefinition::Union(u) => {
+            ctx.resolver
+                .resolve_object(field_value, field, field_definition, u.into())
+                .await
+        }
 
+        // Err(QueryExecutionError::Unimplemented("unions".to_owned())),
         s::TypeDefinition::InputObject(_) => unreachable!("input objects are never resolved"),
     }
     .map_err(|e| vec![e])
