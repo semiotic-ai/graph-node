@@ -155,10 +155,9 @@ impl<'a> QueryableType<'a> {
         match self {
             QueryableType::Object(o) => o.name == typename,
             QueryableType::Interface(s::InterfaceType { name, .. })
-            | QueryableType::Union(s::UnionType { name, .. }) => types_for_interface
-                [name.as_str()]
-            .iter()
-            .any(|o| o.name == typename),
+            | QueryableType::Union(s::UnionType { name, .. }) => types_for_interface[name.as_str()]
+                .iter()
+                .any(|o| o.name == typename),
         }
     }
 

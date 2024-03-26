@@ -46,16 +46,14 @@ pub(crate) fn build_query<'a>(
             vec![(entity_type, selected_columns)]
         }
         QueryableType::Interface(s::InterfaceType { name, .. })
-        | QueryableType::Union(s::UnionType { name, .. }) => {
-            types_for_interface_or_union[name]
-                .iter()
-                .map(|o| {
-                    let selected_columns = column_names.get(o);
-                    let entity_type = schema.input.entity_type(o).unwrap();
-                    (entity_type, selected_columns)
-                })
-                .collect()
-        }
+        | QueryableType::Union(s::UnionType { name, .. }) => types_for_interface_or_union[name]
+            .iter()
+            .map(|o| {
+                let selected_columns = column_names.get(o);
+                let entity_type = schema.input.entity_type(o).unwrap();
+                (entity_type, selected_columns)
+            })
+            .collect(),
     });
     let mut query = EntityQuery::new(parse_subgraph_id(entity)?, block, entity_types)
         .range(build_range(field, max_first, max_skip)?);
@@ -579,14 +577,13 @@ fn build_order_by(
                 // In the case of an interface, we need to find the field on one of the types that implement the interface,
                 // as the `@derivedFrom` directive is only allowed on object types.
                 let field = match entity {
-                    QueryableType::Object(_) => {
-                        sast::get_field(entity, parent_field_name.as_str()).ok_or_else(|| {
+                    QueryableType::Object(_) => sast::get_field(entity, parent_field_name.as_str())
+                        .ok_or_else(|| {
                             QueryExecutionError::EntityFieldError(
                                 entity.name().to_owned(),
                                 parent_field_name.clone(),
                             )
-                        })?
-                    }
+                        })?,
                     QueryableType::Interface(_) | QueryableType::Union(_) => {
                         let object_types = schema
                             .api
@@ -643,13 +640,11 @@ fn build_order_by(
                 };
 
                 let child = match child_entity {
-                    QueryableType::Object(_) => {
-                        OrderByChild::Object(ObjectOrderDetails {
-                            entity_type: schema.input.entity_type(base_type)?,
-                            join_attribute,
-                            derived,
-                        })
-                    }
+                    QueryableType::Object(_) => OrderByChild::Object(ObjectOrderDetails {
+                        entity_type: schema.input.entity_type(base_type)?,
+                        join_attribute,
+                        derived,
+                    }),
                     QueryableType::Interface(s::InterfaceType { name, .. })
                     | QueryableType::Union(s::UnionType { name, .. }) => {
                         let entity_types = schema
