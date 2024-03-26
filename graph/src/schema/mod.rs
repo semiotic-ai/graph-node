@@ -140,7 +140,8 @@ impl Schema {
     // fully validated. The code should be changed to make sure that a
     // `Schema` is always fully valid
     pub fn new(id: DeploymentHash, document: s::Document) -> Result<Self, SchemaValidationError> {
-        let (interfaces_for_type, types_for_interface_or_union) = Self::collect_interfaces(&document)?;
+        let (interfaces_for_type, types_for_interface_or_union) =
+            Self::collect_interfaces(&document)?;
 
         let mut schema = Schema {
             id: id.clone(),

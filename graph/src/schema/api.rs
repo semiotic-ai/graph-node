@@ -5,7 +5,7 @@ use graphql_parser::Pos;
 use inflector::Inflector;
 use lazy_static::lazy_static;
 
-use crate::data::graphql::{QueryableType, ObjectTypeExt};
+use crate::data::graphql::{ObjectTypeExt, QueryableType};
 use crate::data::store::IdType;
 use crate::schema::{
     ast, META_FIELD_NAME, META_FIELD_TYPE, SQL_FIELD_NAME, SQL_FIELD_TYPE, SQL_INPUT_TYPE,
