@@ -10,8 +10,8 @@ members = [
     "store/*",
     "substreams/*",
     "graph",
-    "graph/derive",
     "tests",
+    "graph/derive",
 ]
 
 [workspace.package]

@@ -16,7 +16,7 @@ use crate::schema::{
 use crate::data::graphql::ext::{
     camel_cased_names, DefinitionExt, DirectiveExt, DocumentExt, ValueExt,
 };
-use crate::prelude::s::{Value, *};
+use crate::prelude::s::*;
 use crate::prelude::*;
 use thiserror::Error;
 
@@ -1361,113 +1361,6 @@ fn sql_field() -> s::Field {
     }
 
     SQL_FIELD.clone()
-}
-
-/// Generates arguments for collection queries of a named type (e.g. User).
-fn collection_arguments_for_named_type(type_name: &str) -> Vec<InputValue> {
-    // `first` and `skip` should be non-nullable, but the Apollo graphql client
-    // exhibts non-conforming behaviour by erroing if no value is provided for a
-    // non-nullable field, regardless of the presence of a default.
-    let mut skip = input_value("skip", "", Type::NamedType("Int".to_string()));
-    skip.default_value = Some(Value::Int(0.into()));
-
-    let mut first = input_value("first", "", Type::NamedType("Int".to_string()));
-    first.default_value = Some(Value::Int(100.into()));
-
-    let args = vec![
-        skip,
-        first,
-        input_value(
-            "orderBy",
-            "",
-            Type::NamedType(format!("{}_orderBy", type_name)),
-        ),
-        input_value(
-            "orderDirection",
-            "",
-            Type::NamedType("OrderDirection".to_string()),
-        ),
-        input_value(
-            "where",
-            "",
-            Type::NamedType(format!("{}_filter", type_name)),
-        ),
-    ];
-
-    args
-}
-
-fn add_field_arguments(
-    schema: &mut Document,
-    input_schema: &Document,
-) -> Result<(), APISchemaError> {
-    // Refactor: Remove the `input_schema` argument and do a mutable iteration
-    // over the definitions in `schema`. Also the duplication between this and
-    // the loop for interfaces below.
-    for input_object_type in input_schema.get_object_type_definitions() {
-        for input_field in &input_object_type.fields {
-            if let Some(input_reference_type) =
-                ast::get_referenced_entity_type(input_schema, input_field)
-            {
-                if ast::is_list_or_non_null_list_field(input_field) {
-                    // Get corresponding object type and field in the output schema
-                    let object_type = ast::get_object_type_mut(schema, &input_object_type.name)
-                        .expect("object type from input schema is missing in API schema");
-                    let field = object_type
-                        .fields
-                        .iter_mut()
-                        .find(|field| field.name == input_field.name)
-                        .expect("field from input schema is missing in API schema");
-
-                    match input_reference_type {
-                        TypeDefinition::Object(ot) => {
-                            field.arguments = collection_arguments_for_named_type(&ot.name);
-                        }
-                        TypeDefinition::Interface(it) => {
-                            field.arguments = collection_arguments_for_named_type(&it.name);
-                        }
-                        _ => unreachable!(
-                            "referenced entity types can only be object or interface types"
-                        ),
-                    }
-                }
-            }
-        }
-    }
-
-    for input_interface_type in input_schema.get_interface_type_definitions() {
-        for input_field in &input_interface_type.fields {
-            if let Some(input_reference_type) =
-                ast::get_referenced_entity_type(input_schema, input_field)
-            {
-                if ast::is_list_or_non_null_list_field(input_field) {
-                    // Get corresponding interface type and field in the output schema
-                    let interface_type =
-                        ast::get_interface_type_mut(schema, &input_interface_type.name)
-                            .expect("interface type from input schema is missing in API schema");
-                    let field = interface_type
-                        .fields
-                        .iter_mut()
-                        .find(|field| field.name == input_field.name)
-                        .expect("field from input schema is missing in API schema");
-
-                    match input_reference_type {
-                        TypeDefinition::Object(ot) => {
-                            field.arguments = collection_arguments_for_named_type(&ot.name);
-                        }
-                        TypeDefinition::Interface(it) => {
-                            field.arguments = collection_arguments_for_named_type(&it.name);
-                        }
-                        _ => unreachable!(
-                            "referenced entity types can only be object or interface types"
-                        ),
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]

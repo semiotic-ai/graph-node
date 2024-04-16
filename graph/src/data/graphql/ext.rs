@@ -14,7 +14,6 @@ pub trait ObjectTypeExt {
     fn field(&self, name: &str) -> Option<&Field>;
     fn is_meta(&self) -> bool;
     fn is_sql(&self) -> bool;
-    fn is_immutable(&self) -> bool;
 }
 
 impl ObjectTypeExt for ObjectType {
@@ -28,16 +27,6 @@ impl ObjectTypeExt for ObjectType {
 
     fn is_sql(&self) -> bool {
         self.name == SQL_FIELD_TYPE
-    }
-
-    fn is_immutable(&self) -> bool {
-        self.find_directive("entity")
-            .and_then(|dir| dir.argument("immutable"))
-            .map(|value| match value {
-                Value::Boolean(b) => *b,
-                _ => false,
-            })
-            .unwrap_or(false)
     }
 }
 
@@ -53,10 +42,6 @@ impl ObjectTypeExt for InterfaceType {
     fn is_sql(&self) -> bool {
         false
     }
-
-    fn is_immutable(&self) -> bool {
-        false
-    }
 }
 
 impl ObjectTypeExt for UnionType {
@@ -70,10 +55,6 @@ impl ObjectTypeExt for UnionType {
 
     fn is_sql(&self) -> bool {
         self.name == SQL_FIELD_TYPE
-    }
-
-    fn is_immutable(&self) -> bool {
-        false
     }
 }
 

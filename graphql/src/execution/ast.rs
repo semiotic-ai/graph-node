@@ -1,9 +1,7 @@
 use std::collections::{BTreeSet, HashSet};
 
 use graph::{
-    components::store::{AttributeNames, ChildMultiplicity},
-    data::{graphql::ObjectOrInterface, store::ID},
-    constraint_violation,
+    components::store::{AttributeNames, ChildMultiplicity, EntityOrder},
     data::{graphql::QueryableType, store::ID},
     env::ENV_VARS,
     prelude::{anyhow, q, r, s, QueryExecutionError, ValueMap},

@@ -131,39 +131,40 @@ mod test {
 
     const SQL_QUERY: &str = "
         with tokens as (
-            select * from (values 
+            select * from (values
             ('0x0000000000000000000000000000000000000000','ETH','Ethereum',18),
             ('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48','USDC','USD Coin',6)
             ) as t(address,symbol,name,decimals)
         )
 
-        select 
+        select
         date,
         t.symbol,
         SUM(amount)/pow(10,t.decimals) as amount
-        from (select 
+        from (select
         date(to_timestamp(block_timestamp) at time zone 'utc') as date,
         token,
         amount
-        from swap_multi as sm 
+        from swap_multi as sm
         ,unnest(sm.amounts_in,sm.tokens_in) as smi(amount,token)
         union all
-        select 
+        select
         date(to_timestamp(block_timestamp) at time zone 'utc') as date,
         token,
         amount
-        from sgd1.swap_multi as sm 
+        from sgd1.swap_multi as sm
         ,unnest(sm.amounts_out,sm.tokens_out) as smo(amount,token)
         ) as tp
         inner join tokens as t on t.address = '0x' || encode(tp.token,'hex')
         group by tp.date,t.symbol,t.decimals
-        order by tp.date desc ,amount desc 
-        
+        order by tp.date desc ,amount desc
+
         ";
 
     fn test_layout() -> Layout {
         let subgraph = DeploymentHash::new("subgraph").unwrap();
-        let schema = InputSchema::parse(TEST_GQL, subgraph.clone()).expect("Test schema invalid");
+        let schema =
+            InputSchema::parse_latest(TEST_GQL, subgraph.clone()).expect("Test schema invalid");
         let namespace = Namespace::new(NAMESPACE.to_owned()).unwrap();
         let site = Arc::new(make_dummy_site(subgraph, namespace, "anet".to_string()));
         let catalog =

@@ -1770,7 +1770,6 @@ dependencies = [
  "async-recursion",
  "crossbeam",
  "graph",
- "graphql-parser",
  "graphql-tools",
  "lazy_static",
  "parking_lot 0.12.1",
