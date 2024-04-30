@@ -140,7 +140,7 @@ impl QueryExecutionError {
             | IdMissing
             | IdNotString
             | ConstraintViolation(_) => false,
-            | SqlError(_) => false,
+            SqlError(_) => false,
         }
     }
 }
