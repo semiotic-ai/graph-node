@@ -282,12 +282,6 @@ impl StoreResolver {
     }
 
     fn handle_sql(&self, field: &a::Field) -> Result<r::Value, QueryExecutionError> {
-        if !ENV_VARS.graphql.enable_sql_service {
-            return Err(QueryExecutionError::NotSupported(
-                "SQL service is not enabled".into(),
-            ));
-        }
-
         let input = field
             .argument_value("input")
             .ok_or_else(|| QueryExecutionError::EmptyQuery)?;
@@ -418,7 +412,7 @@ impl Resolver for StoreResolver {
             return self.lookup_meta(field).await;
         }
 
-        if object_type.is_sql() {
+        if ENV_VARS.graphql.enable_sql_service && object_type.is_sql() {
             return self.handle_sql(field);
         }
 
